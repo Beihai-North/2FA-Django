@@ -48,8 +48,8 @@ def login_view(request):
         # 如果用户没有启用 2FA，则直接返回 JWT 令牌
         refresh = RefreshToken.for_user(user)
         return Response({
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
+            'refresh_token': str(refresh),
+            'access_token': str(refresh.access_token),
         }, status=status.HTTP_200_OK)
 
 # 登出视图：注销用户并将 JWT 令牌加入黑名单
@@ -145,8 +145,8 @@ def verify_2fa(request):
         # 验证成功，生成 JWT 令牌
         refresh = RefreshToken.for_user(user)
         return Response({
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
+            'refresh_token': str(refresh),
+            'access_token': str(refresh.access_token),
         }, status=status.HTTP_200_OK)
     else:
         return Response({"detail": "Invalid OTP code."}, status=status.HTTP_401_UNAUTHORIZED)
