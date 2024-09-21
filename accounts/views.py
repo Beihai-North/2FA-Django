@@ -11,6 +11,7 @@ from django.contrib.auth.models import User
 from .serializers import UserSerializer
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from django.contrib.auth import authenticate
+from .utils import is_2fa_enabled
 
 # 用户注册视图：处理用户注册请求
 # 对应 API：POST /api/register/
@@ -33,12 +34,9 @@ def login_view(request):
         return Response({"detail": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
 
     user = User.objects.get(username=username)
-    user_id = user.id  # 获取用户的 ID
 
-    # 检查用户是否启用了 2FA
-    totp_device = TOTPDevice.objects.filter(user_id=user_id,confirmed=1).first()
-
-    if totp_device:
+    # 使用新的方法检查用户是否启用了 2FA
+    if is_2fa_enabled(user):
         # 如果用户启用了 2FA，返回标志，要求用户进一步验证 OTP
         return Response({
             "detail": "2FA required",
@@ -51,6 +49,7 @@ def login_view(request):
             'refresh_token': str(refresh),
             'access_token': str(refresh.access_token),
         }, status=status.HTTP_200_OK)
+
 
 # 登出视图：注销用户并将 JWT 令牌加入黑名单
 # 对应 API：POST /api/logout/
@@ -117,6 +116,27 @@ def generate_2fa_qr(request):
         'otp_auth_url': qr_url
     })
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def check_2fa_status_view(request):
+    """
+    检查当前用户是否启用了 2FA
+    :param request: 包含用户认证信息的请求对象
+    :return: 如果启用了 2FA 返回 True，否则返回 False
+    """
+    user = request.user  # 获取当前已认证的用户
+
+    # 使用前面定义的辅助函数来检查用户是否启用了 2FA
+    if is_2fa_enabled(user):
+        return Response({
+            "status": True,
+            "detail": "2FA is enabled for this user."
+        }, status=status.HTTP_200_OK)
+    else:
+        return Response({
+            "status": False,
+            "detail": "2FA is not enabled for this user."
+        }, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
